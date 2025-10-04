@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Clone</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- صفحة تسجيل الدخول -->
+    <div id="loginPage" class="page">
+        <div class="login-container">
+            <div class="login-box">
+                <h1>Instagram</h1>
+                <form id="loginForm">
+                    <input type="email" id="loginEmail" placeholder="البريد الإلكتروني" required>
+                    <input type="password" id="loginPassword" placeholder="كلمة المرور" required>
+                    <button type="submit">تسجيل الدخول</button>
+                </form>
+                <p>ليس لديك حساب؟ <a href="#" id="showRegister">سجل الآن</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- صفحة التسجيل -->
+    <div id="registerPage" class="page hidden">
+        <div class="login-container">
+            <div class="login-box">
+                <h1>Instagram</h1>
+                <form id="registerForm">
+                    <input type="text" id="registerUsername" placeholder="اسم المستخدم" required>
+                    <input type="email" id="registerEmail" placeholder="البريد الإلكتروني" required>
+                    <input type="password" id="registerPassword" placeholder="كلمة المرور" required>
+                    <input type="file" id="profileImage" accept="image/*">
+                    <button type="submit">إنشاء حساب</button>
+                </form>
+                <p>لديك حساب بالفعل؟ <a href="#" id="showLogin">سجل الدخول</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- الصفحة الرئيسية -->
+    <div id="mainPage" class="page hidden">
+        <header class="header">
+            <h1>Instagram</h1>
+            <div class="header-actions">
+                <button id="profileBtn" class="btn-secondary">الملف الشخصي</button>
+                <button id="addPostBtn" class="btn-primary">إضافة منشور</button>
+                <button id="adminBtn" class="btn-secondary">الإدارة</button>
+                <button id="logoutBtn" class="btn-danger">تسجيل الخروج</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="posts-container" id="postsContainer">
+                <!-- المنشورات ستظهر هنا -->
+            </div>
+        </main>
+    </div>
+
+    <!-- صفحة الإدارة -->
+    <div id="adminPage" class="page hidden">
+        <header class="header">
+            <h1>لوحة الإدارة</h1>
+            <div class="header-actions">
+                <button id="backToMainBtn" class="btn-primary">العودة للرئيسية</button>
+                <button id="adminLogoutBtn" class="btn-danger">تسجيل الخروج</button>
+            </div>
+        </header>
+
+        <main class="admin-content">
+            <div class="admin-stats">
+                <div class="stat-card">
+                    <h3>إجمالي المستخدمين</h3>
+                    <p id="totalUsers">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>إجمالي المنشورات</h3>
+                    <p id="totalPosts">0</p>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h2>إدارة المستخدمين</h2>
+                <div id="usersList" class="users-list">
+                    <!-- قائمة المستخدمين -->
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h2>إدارة المنشورات</h2>
+                <div id="adminPostsList" class="posts-list">
+                    <!-- قائمة المنشورات -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- نافذة إضافة منشور -->
+    <div id="addPostModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>إضافة منشور جديد</h2>
+                <button id="closeModal" class="close-btn">&times;</button>
+            </div>
+            <form id="addPostForm">
+                <textarea id="postText" placeholder="اكتب تعليقك..." rows="4"></textarea>
+                <input type="file" id="postImage" accept="image/*">
+                <div class="form-actions">
+                    <button type="button" id="cancelPost">إلغاء</button>
+                    <button type="submit">نشر</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- صفحة تغيير صورة الملف الشخصي -->
+    <div id="profilePage" class="page hidden">
+        <header class="header">
+            <h1>تغيير صورة الملف الشخصي</h1>
+            <div class="header-actions">
+                <button id="backToMainFromProfile" class="btn-primary">العودة للرئيسية</button>
+                <button id="profileLogoutBtn" class="btn-danger">تسجيل الخروج</button>
+            </div>
+        </header>
+
+        <main class="profile-content">
+            <div class="profile-container">
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="current-avatar-container">
+                            <img id="currentAvatar" src="https://via.placeholder.com/150/667eea/ffffff?text=👤" 
+                                 alt="صورة الملف الشخصي الحالية" class="current-avatar">
+                            <div class="avatar-overlay">
+                                <span>تغيير الصورة</span>
+                            </div>
+                        </div>
+                        <h2 id="currentUsername">اسم المستخدم</h2>
+                        <p id="currentEmail">البريد الإلكتروني</p>
+                    </div>
+
+                    <div class="profile-form">
+                        <h3>تحديث الملف الشخصي</h3>
+                        <form id="updateProfileForm">
+                            <div class="form-group">
+                                <label for="newUsername">اسم المستخدم:</label>
+                                <input type="text" id="newUsername" placeholder="اسم المستخدم الجديد">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="newProfileImage">صورة الملف الشخصي:</label>
+                                <input type="file" id="newProfileImage" accept="image/*" onchange="previewNewAvatar()">
+                                <div id="newAvatarPreview" class="avatar-preview"></div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" id="cancelProfileUpdate">إلغاء</button>
+                                <button type="submit" id="updateProfileBtn">تحديث الملف الشخصي</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="profile-actions">
+                        <button id="deleteAccountBtn" class="btn-danger">حذف الحساب</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

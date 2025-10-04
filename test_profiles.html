@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار جدول Profiles</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 اختبار جدول Profiles</h1>
+    
+    <div class="test-section">
+        <h2>1. اختبار وجود جدول Profiles</h2>
+        <button onclick="testTableExists()">فحص وجود الجدول</button>
+        <div id="table-exists-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار إدراج بيانات في Profiles</h2>
+        <div class="form-group">
+            <label>اسم المستخدم:</label>
+            <input type="text" id="testUsername" value="test_user" placeholder="اسم المستخدم">
+        </div>
+        <div class="form-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="email" id="testEmail" value="test@example.com" placeholder="البريد الإلكتروني">
+        </div>
+        <button onclick="testInsertProfile()">اختبار الإدراج</button>
+        <div id="insert-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار قراءة بيانات من Profiles</h2>
+        <button onclick="testSelectProfiles()">اختبار القراءة</button>
+        <div id="select-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. اختبار تسجيل مستخدم جديد</h2>
+        <div class="form-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="email" id="registerEmail" value="" placeholder="البريد الإلكتروني">
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور:</label>
+            <input type="password" id="registerPassword" value="" placeholder="كلمة المرور">
+        </div>
+        <div class="form-group">
+            <label>اسم المستخدم:</label>
+            <input type="text" id="registerUsername" value="" placeholder="اسم المستخدم">
+        </div>
+        <button onclick="testFullRegistration()">اختبار التسجيل الكامل</button>
+        <div id="registration-result"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // إعداد Supabase
+        const supabaseUrl = 'https://mpcrbgtqqeopypxvcicj.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wY3JiZ3RxcWVvcHlweHZjaWNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwMjQsImV4cCI6MjA3NTE0MzAyNH0.6WDHyVsg4XmQ1wzwJ6WZj366Q838LsfzSuzTuBQWbEo';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function testTableExists() {
+            log('فحص وجود جدول profiles...', 'info');
+            const resultDiv = document.getElementById('table-exists-result');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    if (error.code === 'PGRST116' || error.message.includes('relation "profiles" does not exist')) {
+                        log('❌ جدول profiles غير موجود', 'error');
+                        resultDiv.innerHTML = '<span class="error">جدول profiles غير موجود - يرجى تشغيل create_profiles_table.sql</span>';
+                    } else {
+                        log(`❌ خطأ في فحص الجدول: ${error.message}`, 'error');
+                        resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    }
+                } else {
+                    log('✅ جدول profiles موجود ويعمل', 'success');
+                    resultDiv.innerHTML = '<span class="success">جدول profiles موجود ويعمل</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في فحص الجدول: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testInsertProfile() {
+            const username = document.getElementById('testUsername').value;
+            const email = document.getElementById('testEmail').value;
+            
+            if (!username || !email) {
+                log('❌ يرجى إدخال اسم المستخدم والبريد الإلكتروني', 'error');
+                return;
+            }
+            
+            log(`محاولة إدراج ملف شخصي: ${username} - ${email}`, 'info');
+            const resultDiv = document.getElementById('insert-result');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .insert([
+                        {
+                            id: '00000000-0000-0000-0000-000000000000', // UUID تجريبي
+                            username: username,
+                            email: email,
+                            avatar_url: null,
+                            is_admin: false
+                        }
+                    ]);
+                
+                if (error) {
+                    log(`❌ خطأ في الإدراج: ${error.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                } else {
+                    log('✅ تم إدراج الملف الشخصي بنجاح', 'success');
+                    resultDiv.innerHTML = '<span class="success">تم إدراج الملف الشخصي بنجاح</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في الإدراج: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testSelectProfiles() {
+            log('محاولة قراءة بيانات من جدول profiles...', 'info');
+            const resultDiv = document.getElementById('select-result');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .limit(5);
+                
+                if (error) {
+                    log(`❌ خطأ في القراءة: ${error.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                } else {
+                    log(`✅ تم قراءة ${data.length} ملف شخصي`, 'success');
+                    resultDiv.innerHTML = `<span class="success">تم قراءة ${data.length} ملف شخصي</span>`;
+                    log(`البيانات: ${JSON.stringify(data, null, 2)}`, 'info');
+                }
+            } catch (err) {
+                log(`❌ خطأ في القراءة: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testFullRegistration() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const username = document.getElementById('registerUsername').value;
+            
+            if (!email || !password || !username) {
+                log('❌ يرجى ملء جميع الحقول', 'error');
+                return;
+            }
+            
+            log(`بدء اختبار التسجيل الكامل: ${email}`, 'info');
+            const resultDiv = document.getElementById('registration-result');
+            
+            try {
+                // 1. إنشاء المستخدم
+                log('1. إنشاء المستخدم...', 'info');
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password
+                });
+                
+                if (authError) {
+                    log(`❌ خطأ في إنشاء المستخدم: ${authError.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ في إنشاء المستخدم: ${authError.message}</span>`;
+                    return;
+                }
+                
+                log('✅ تم إنشاء المستخدم بنجاح', 'success');
+                
+                // 2. إنشاء الملف الشخصي
+                log('2. إنشاء الملف الشخصي...', 'info');
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .insert([
+                        {
+                            id: authData.user.id,
+                            username: username,
+                            email: email,
+                            avatar_url: null,
+                            is_admin: false
+                        }
+                    ]);
+                
+                if (profileError) {
+                    log(`❌ خطأ في إنشاء الملف الشخصي: ${profileError.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ في إنشاء الملف الشخصي: ${profileError.message}</span>`;
+                    return;
+                }
+                
+                log('✅ تم إنشاء الملف الشخصي بنجاح', 'success');
+                resultDiv.innerHTML = '<span class="success">تم التسجيل الكامل بنجاح!</span>';
+                
+            } catch (err) {
+                log(`❌ خطأ في التسجيل الكامل: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        // تشغيل اختبار الجدول تلقائياً عند تحميل الصفحة
+        window.onload = function() {
+            testTableExists();
+        };
+    </script>
+</body>
+</html>

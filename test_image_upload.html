@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار رفع الصور</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .warning { color: orange; font-weight: bold; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <h1>📤 اختبار رفع الصور</h1>
+    
+    <div class="test-section">
+        <h2>1. فحص Storage Buckets</h2>
+        <button onclick="checkBuckets()">فحص Buckets</button>
+        <div id="buckets-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار رفع صورة</h2>
+        <div class="form-group">
+            <label>اختر صورة:</label>
+            <input type="file" id="testImage" accept="image/*" onchange="previewImage()">
+        </div>
+        <div id="image-preview"></div>
+        <button onclick="testUploadImage()">رفع الصورة</button>
+        <div class="progress-bar" id="progressBar" style="display: none;">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div id="upload-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار رفع صورة الملف الشخصي</h2>
+        <div class="form-group">
+            <label>صورة الملف الشخصي:</label>
+            <input type="file" id="profileImage" accept="image/*" onchange="previewProfileImage()">
+        </div>
+        <div id="profile-preview"></div>
+        <button onclick="testUploadProfileImage()">رفع صورة الملف الشخصي</button>
+        <div id="profile-upload-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. اختبار رفع صورة المنشور</h2>
+        <div class="form-group">
+            <label>صورة المنشور:</label>
+            <input type="file" id="postImage" accept="image/*" onchange="previewPostImage()">
+        </div>
+        <div id="post-preview"></div>
+        <button onclick="testUploadPostImage()">رفع صورة المنشور</button>
+        <div id="post-upload-result"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // إعداد Supabase
+        const supabaseUrl = 'https://mpcrbgtqqeopypxvcicj.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wY3JiZ3RxcWVvcHlweHZjaWNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwMjQsImV4cCI6MjA3NTE0MzAyNH0.6WDHyVsg4XmQ1wzwJ6WZj366Q838LsfzSuzTuBQWbEo';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function updateProgress(percent) {
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            progressBar.style.display = 'block';
+            progressFill.style.width = percent + '%';
+        }
+        
+        function hideProgress() {
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.display = 'none';
+        }
+        
+        function previewImage() {
+            const file = document.getElementById('testImage').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('image-preview').innerHTML = 
+                        `<img src="${e.target.result}" class="image-preview" alt="معاينة الصورة">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function previewProfileImage() {
+            const file = document.getElementById('profileImage').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('profile-preview').innerHTML = 
+                        `<img src="${e.target.result}" class="image-preview" alt="معاينة صورة الملف الشخصي">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        function previewPostImage() {
+            const file = document.getElementById('postImage').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('post-preview').innerHTML = 
+                        `<img src="${e.target.result}" class="image-preview" alt="معاينة صورة المنشور">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function checkBuckets() {
+            log('فحص Storage Buckets...', 'info');
+            const resultDiv = document.getElementById('buckets-result');
+            
+            try {
+                const { data: buckets, error } = await supabase.storage.listBuckets();
+                
+                if (error) {
+                    log('❌ خطأ في فحص Buckets: ' + error.message, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    return;
+                }
+                
+                log('✅ تم العثور على ' + buckets.length + ' buckets', 'success');
+                
+                let html = '<div>';
+                buckets.forEach(bucket => {
+                    const isPublic = bucket.public ? 'عام' : 'خاص';
+                    const isProfiles = bucket.name === 'profiles' ? ' (مطلوب)' : '';
+                    const isPosts = bucket.name === 'posts' ? ' (مطلوب)' : '';
+                    
+                    html += `<p><strong>${bucket.name}</strong> - ${isPublic}${isProfiles}${isPosts}</p>`;
+                    
+                    if (bucket.name === 'profiles') {
+                        log('✅ bucket profiles موجود', 'success');
+                    } else if (bucket.name === 'posts') {
+                        log('✅ bucket posts موجود', 'success');
+                    }
+                });
+                
+                if (!buckets.find(b => b.name === 'profiles')) {
+                    log('❌ bucket profiles غير موجود', 'error');
+                    html += '<p class="error">❌ bucket profiles غير موجود - يجب إنشاؤه</p>';
+                }
+                
+                if (!buckets.find(b => b.name === 'posts')) {
+                    log('❌ bucket posts غير موجود', 'error');
+                    html += '<p class="error">❌ bucket posts غير موجود - يجب إنشاؤه</p>';
+                }
+                
+                html += '</div>';
+                resultDiv.innerHTML = html;
+                
+            } catch (err) {
+                log('❌ خطأ في فحص Buckets: ' + err.message, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testUploadImage() {
+            const file = document.getElementById('testImage').files[0];
+            if (!file) {
+                log('❌ يرجى اختيار صورة', 'error');
+                return;
+            }
+            
+            log('بدء رفع الصورة...', 'info');
+            updateProgress(10);
+            
+            const resultDiv = document.getElementById('upload-result');
+            
+            try {
+                const fileName = `test_${Date.now()}.${file.name.split('.').pop()}`;
+                log('اسم الملف: ' + fileName, 'info');
+                
+                updateProgress(30);
+                
+                const { data, error } = await supabase.storage
+                    .from('profiles')
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                updateProgress(70);
+                
+                if (error) {
+                    log('❌ خطأ في رفع الصورة: ' + error.message, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    hideProgress();
+                    return;
+                }
+                
+                log('✅ تم رفع الصورة بنجاح', 'success');
+                
+                const { data: { publicUrl } } = supabase.storage
+                    .from('profiles')
+                    .getPublicUrl(fileName);
+                
+                updateProgress(100);
+                
+                log('رابط الصورة: ' + publicUrl, 'info');
+                
+                resultDiv.innerHTML = `
+                    <div>
+                        <p class="success">تم رفع الصورة بنجاح</p>
+                        <img src="${publicUrl}" class="image-preview" alt="الصورة المرفوعة">
+                        <p><strong>الرابط:</strong> <a href="${publicUrl}" target="_blank">${publicUrl}</a></p>
+                    </div>
+                `;
+                
+                setTimeout(hideProgress, 1000);
+                
+            } catch (err) {
+                log('❌ خطأ في رفع الصورة: ' + err.message, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+                hideProgress();
+            }
+        }
+        
+        async function testUploadProfileImage() {
+            const file = document.getElementById('profileImage').files[0];
+            if (!file) {
+                log('❌ يرجى اختيار صورة للملف الشخصي', 'error');
+                return;
+            }
+            
+            log('بدء رفع صورة الملف الشخصي...', 'info');
+            const resultDiv = document.getElementById('profile-upload-result');
+            
+            try {
+                // محاكاة ID مستخدم
+                const userId = 'test-user-' + Date.now();
+                const fileName = `${userId}.${file.name.split('.').pop()}`;
+                
+                log('رفع صورة الملف الشخصي: ' + fileName, 'info');
+                
+                const { data, error } = await supabase.storage
+                    .from('profiles')
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (error) {
+                    log('❌ خطأ في رفع صورة الملف الشخصي: ' + error.message, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    return;
+                }
+                
+                const { data: { publicUrl } } = supabase.storage
+                    .from('profiles')
+                    .getPublicUrl(fileName);
+                
+                log('✅ تم رفع صورة الملف الشخصي بنجاح', 'success');
+                
+                resultDiv.innerHTML = `
+                    <div>
+                        <p class="success">تم رفع صورة الملف الشخصي بنجاح</p>
+                        <img src="${publicUrl}" class="image-preview" alt="صورة الملف الشخصي">
+                        <p><strong>الرابط:</strong> <a href="${publicUrl}" target="_blank">${publicUrl}</a></p>
+                    </div>
+                `;
+                
+            } catch (err) {
+                log('❌ خطأ في رفع صورة الملف الشخصي: ' + err.message, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testUploadPostImage() {
+            const file = document.getElementById('postImage').files[0];
+            if (!file) {
+                log('❌ يرجى اختيار صورة للمنشور', 'error');
+                return;
+            }
+            
+            log('بدء رفع صورة المنشور...', 'info');
+            const resultDiv = document.getElementById('post-upload-result');
+            
+            try {
+                const fileName = `post_${Date.now()}.${file.name.split('.').pop()}`;
+                
+                log('رفع صورة المنشور: ' + fileName, 'info');
+                
+                const { data, error } = await supabase.storage
+                    .from('posts')
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (error) {
+                    log('❌ خطأ في رفع صورة المنشور: ' + error.message, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    return;
+                }
+                
+                const { data: { publicUrl } } = supabase.storage
+                    .from('posts')
+                    .getPublicUrl(fileName);
+                
+                log('✅ تم رفع صورة المنشور بنجاح', 'success');
+                
+                resultDiv.innerHTML = `
+                    <div>
+                        <p class="success">تم رفع صورة المنشور بنجاح</p>
+                        <img src="${publicUrl}" class="image-preview" alt="صورة المنشور">
+                        <p><strong>الرابط:</strong> <a href="${publicUrl}" target="_blank">${publicUrl}</a></p>
+                    </div>
+                `;
+                
+            } catch (err) {
+                log('❌ خطأ في رفع صورة المنشور: ' + err.message, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        // فحص Buckets تلقائياً عند تحميل الصفحة
+        window.onload = function() {
+            checkBuckets();
+        };
+    </script>
+</body>
+</html>

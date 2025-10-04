@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار عرض الصور</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .post-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .post-header {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e1e1e1;
+            transition: border-color 0.3s;
+        }
+        .post-avatar:hover {
+            border-color: #667eea;
+        }
+        .post-user-info h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .post-user-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        .post-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+        }
+        .post-content {
+            padding: 20px;
+        }
+        .post-text {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        .post-actions {
+            display: flex;
+            gap: 20px;
+            padding: 0 20px 20px;
+        }
+        .post-action {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 16px;
+            transition: color 0.2s;
+        }
+        .post-action:hover {
+            color: #667eea;
+        }
+        .post-date {
+            color: #999;
+            font-size: 12px;
+            padding: 0 20px 15px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🖼️ اختبار عرض الصور</h1>
+    
+    <div class="test-section">
+        <h2>1. اختبار صور الملف الشخصي</h2>
+        <button onclick="testProfileImages()">اختبار صور الملف الشخصي</button>
+        <div id="profile-images-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار صور المنشورات</h2>
+        <button onclick="testPostImages()">اختبار صور المنشورات</button>
+        <div id="post-images-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار معالجة الأخطاء</h2>
+        <button onclick="testErrorHandling()">اختبار معالجة الأخطاء</button>
+        <div id="error-handling-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. معاينة المنشورات</h2>
+        <button onclick="previewPosts()">معاينة المنشورات</button>
+        <div id="posts-preview"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function testProfileImages() {
+            log('اختبار صور الملف الشخصي...', 'info');
+            const resultDiv = document.getElementById('profile-images-result');
+            
+            const testImages = [
+                { url: 'https://via.placeholder.com/40/667eea/ffffff?text=👤', name: 'صورة افتراضية' },
+                { url: 'https://picsum.photos/40/40', name: 'صورة عشوائية' },
+                { url: 'https://via.placeholder.com/40/28a745/ffffff?text=✅', name: 'صورة خضراء' },
+                { url: 'invalid-url', name: 'رابط غير صالح' },
+                { url: null, name: 'بدون صورة' }
+            ];
+            
+            let html = '<div style="display: flex; gap: 10px; flex-wrap: wrap;">';
+            
+            testImages.forEach((img, index) => {
+                const avatarUrl = img.url || 'https://via.placeholder.com/40/667eea/ffffff?text=👤';
+                html += `
+                    <div style="text-align: center;">
+                        <img src="${avatarUrl}" 
+                             alt="صورة الملف الشخصي" 
+                             class="post-avatar"
+                             onerror="this.src='https://via.placeholder.com/40/667eea/ffffff?text=👤'">
+                        <p style="font-size: 12px; margin: 5px 0;">${img.name}</p>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+            log('تم اختبار صور الملف الشخصي', 'success');
+        }
+        
+        function testPostImages() {
+            log('اختبار صور المنشورات...', 'info');
+            const resultDiv = document.getElementById('post-images-result');
+            
+            const testImages = [
+                { url: 'https://picsum.photos/400/300', name: 'صورة عشوائية' },
+                { url: 'https://via.placeholder.com/400x300/667eea/ffffff?text=صورة+منشور', name: 'صورة افتراضية' },
+                { url: 'invalid-url', name: 'رابط غير صالح' },
+                { url: null, name: 'بدون صورة' }
+            ];
+            
+            let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
+            
+            testImages.forEach((img, index) => {
+                html += `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <img src="https://via.placeholder.com/40/667eea/ffffff?text=👤" 
+                                 alt="صورة الملف الشخصي" 
+                                 class="post-avatar">
+                            <div class="post-user-info">
+                                <h3>مستخدم تجريبي</h3>
+                                <p>اليوم</p>
+                            </div>
+                        </div>
+                        ${img.url ? `<img src="${img.url}" alt="صورة المنشور" class="post-image" onerror="this.style.display='none'">` : ''}
+                        <div class="post-content">
+                            <p class="post-text">منشور تجريبي - ${img.name}</p>
+                        </div>
+                        <div class="post-actions">
+                            <button class="post-action">❤️ 0</button>
+                            <button class="post-action">💬 تعليق</button>
+                            <button class="post-action">📤 مشاركة</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+            log('تم اختبار صور المنشورات', 'success');
+        }
+        
+        function testErrorHandling() {
+            log('اختبار معالجة الأخطاء...', 'info');
+            const resultDiv = document.getElementById('error-handling-result');
+            
+            const testCases = [
+                { url: 'https://invalid-domain-that-does-not-exist.com/image.jpg', name: 'رابط غير موجود' },
+                { url: 'https://httpstat.us/404', name: 'خطأ 404' },
+                { url: 'https://httpstat.us/500', name: 'خطأ 500' },
+                { url: '', name: 'رابط فارغ' },
+                { url: null, name: 'قيمة null' }
+            ];
+            
+            let html = '<div style="display: flex; gap: 10px; flex-wrap: wrap;">';
+            
+            testCases.forEach((testCase, index) => {
+                const avatarUrl = testCase.url || 'https://via.placeholder.com/40/667eea/ffffff?text=👤';
+                html += `
+                    <div style="text-align: center; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+                        <img src="${avatarUrl}" 
+                             alt="صورة الملف الشخصي" 
+                             class="post-avatar"
+                             onerror="this.src='https://via.placeholder.com/40/667eea/ffffff?text=👤'; console.log('تم استبدال الصورة بسبب خطأ')">
+                        <p style="font-size: 12px; margin: 5px 0;">${testCase.name}</p>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+            log('تم اختبار معالجة الأخطاء', 'success');
+        }
+        
+        function previewPosts() {
+            log('معاينة المنشورات...', 'info');
+            const resultDiv = document.getElementById('posts-preview');
+            
+            const samplePosts = [
+                {
+                    profiles: { username: 'أحمد محمد', avatar_url: 'https://via.placeholder.com/40/28a745/ffffff?text=أ' },
+                    content: 'منشور مع صورة جميلة!',
+                    image_url: 'https://picsum.photos/400/300?random=1',
+                    likes: 15,
+                    created_at: new Date().toISOString()
+                },
+                {
+                    profiles: { username: 'فاطمة علي', avatar_url: 'https://via.placeholder.com/40/dc3545/ffffff?text=ف' },
+                    content: 'منشور بدون صورة',
+                    image_url: null,
+                    likes: 8,
+                    created_at: new Date().toISOString()
+                },
+                {
+                    profiles: { username: 'محمد حسن', avatar_url: null },
+                    content: 'منشور مع صورة منشور',
+                    image_url: 'https://picsum.photos/400/300?random=2',
+                    likes: 23,
+                    created_at: new Date().toISOString()
+                }
+            ];
+            
+            let html = '';
+            
+            samplePosts.forEach(post => {
+                const createdAt = new Date(post.created_at).toLocaleDateString('ar-SA');
+                
+                // معالجة صورة الملف الشخصي
+                let avatarUrl = 'https://via.placeholder.com/40/667eea/ffffff?text=👤';
+                if (post.profiles?.avatar_url) {
+                    avatarUrl = post.profiles.avatar_url;
+                }
+                
+                // معالجة صورة المنشور
+                let postImageHtml = '';
+                if (post.image_url) {
+                    postImageHtml = `<img src="${post.image_url}" alt="صورة المنشور" class="post-image" onerror="this.style.display='none'">`;
+                }
+                
+                html += `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <img src="${avatarUrl}" 
+                                 alt="صورة الملف الشخصي" 
+                                 class="post-avatar"
+                                 onerror="this.src='https://via.placeholder.com/40/667eea/ffffff?text=👤'">
+                            <div class="post-user-info">
+                                <h3>${post.profiles?.username || 'مستخدم'}</h3>
+                                <p>${createdAt}</p>
+                            </div>
+                        </div>
+                        ${postImageHtml}
+                        <div class="post-content">
+                            <p class="post-text">${post.content || ''}</p>
+                        </div>
+                        <div class="post-actions">
+                            <button class="post-action">❤️ ${post.likes || 0}</button>
+                            <button class="post-action">💬 تعليق</button>
+                            <button class="post-action">📤 مشاركة</button>
+                        </div>
+                        <div class="post-date">${createdAt}</div>
+                    </div>
+                `;
+            });
+            
+            resultDiv.innerHTML = html;
+            log('تم معاينة المنشورات', 'success');
+        }
+        
+        // تشغيل اختبارات تلقائياً عند تحميل الصفحة
+        window.onload = function() {
+            testProfileImages();
+            testPostImages();
+            testErrorHandling();
+        };
+    </script>
+</body>
+</html>

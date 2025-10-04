@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تشخيص مشاكل Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 تشخيص مشاكل Supabase</h1>
+    
+    <div class="test-section">
+        <h2>1. اختبار الاتصال بـ Supabase</h2>
+        <button onclick="testConnection()">اختبار الاتصال</button>
+        <div id="connection-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار Authentication</h2>
+        <button onclick="testAuth()">اختبار المصادقة</button>
+        <div id="auth-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار قاعدة البيانات</h2>
+        <button onclick="testDatabase()">اختبار الجداول</button>
+        <div id="database-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. اختبار Storage</h2>
+        <button onclick="testStorage()">اختبار التخزين</button>
+        <div id="storage-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. اختبار شامل</h2>
+        <button onclick="runAllTests()">تشغيل جميع الاختبارات</button>
+        <div id="all-results"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // إعداد Supabase
+        const supabaseUrl = 'https://mpcrbgtqqeopypxvcicj.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wY3JiZ3RxcWVvcHlweHZjaWNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwMjQsImV4cCI6MjA3NTE0MzAyNH0.6WDHyVsg4XmQ1wzwJ6WZj366Q838LsfzSuzTuBQWbEo';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+        }
+        
+        async function testConnection() {
+            log('بدء اختبار الاتصال...', 'info');
+            const resultDiv = document.getElementById('connection-result');
+            
+            try {
+                const { data, error } = await supabase.from('profiles').select('count').limit(1);
+                
+                if (error) {
+                    log(`❌ خطأ في الاتصال: ${error.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">فشل الاتصال: ${error.message}</span>`;
+                } else {
+                    log('✅ تم الاتصال بنجاح', 'success');
+                    resultDiv.innerHTML = '<span class="success">تم الاتصال بنجاح</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في الاتصال: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">فشل الاتصال: ${err.message}</span>`;
+            }
+        }
+        
+        async function testAuth() {
+            log('بدء اختبار المصادقة...', 'info');
+            const resultDiv = document.getElementById('auth-result');
+            
+            try {
+                // اختبار إنشاء مستخدم تجريبي مع بريد إلكتروني صالح
+                const testEmail = `test_${Date.now()}@gmail.com`;
+                const testPassword = 'testpassword123';
+                
+                log(`محاولة إنشاء مستخدم: ${testEmail}`, 'info');
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email: testEmail,
+                    password: testPassword
+                });
+                
+                if (error) {
+                    log(`❌ خطأ في المصادقة: ${error.message}`, 'error');
+                    
+                    if (error.message.includes('Invalid email')) {
+                        log('💡 المشكلة: Supabase يرفض البريد الإلكتروني التجريبي', 'info');
+                        log('💡 الحل: استخدم بريد إلكتروني حقيقي للتسجيل', 'info');
+                        resultDiv.innerHTML = '<span class="error">فشل المصادقة: البريد الإلكتروني غير صالح<br><small>استخدم بريد إلكتروني حقيقي للتسجيل</small></span>';
+                    } else {
+                        resultDiv.innerHTML = `<span class="error">فشل المصادقة: ${error.message}</span>`;
+                    }
+                } else {
+                    log('✅ تم اختبار المصادقة بنجاح', 'success');
+                    resultDiv.innerHTML = '<span class="success">تم اختبار المصادقة بنجاح</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في المصادقة: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">فشل المصادقة: ${err.message}</span>`;
+            }
+        }
+        
+        async function testDatabase() {
+            log('بدء اختبار قاعدة البيانات...', 'info');
+            const resultDiv = document.getElementById('database-result');
+            
+            try {
+                // اختبار جدول profiles
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .limit(1);
+                
+                if (profilesError) {
+                    log(`❌ خطأ في جدول profiles: ${profilesError.message}`, 'error');
+                } else {
+                    log('✅ جدول profiles يعمل بشكل صحيح', 'success');
+                }
+                
+                // اختبار جدول posts
+                const { data: postsData, error: postsError } = await supabase
+                    .from('posts')
+                    .select('*')
+                    .limit(1);
+                
+                if (postsError) {
+                    log(`❌ خطأ في جدول posts: ${postsError.message}`, 'error');
+                } else {
+                    log('✅ جدول posts يعمل بشكل صحيح', 'success');
+                }
+                
+                if (profilesError || postsError) {
+                    resultDiv.innerHTML = '<span class="error">هناك مشاكل في قاعدة البيانات</span>';
+                } else {
+                    resultDiv.innerHTML = '<span class="success">قاعدة البيانات تعمل بشكل صحيح</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في قاعدة البيانات: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">فشل اختبار قاعدة البيانات: ${err.message}</span>`;
+            }
+        }
+        
+        async function testStorage() {
+            log('بدء اختبار التخزين...', 'info');
+            const resultDiv = document.getElementById('storage-result');
+            
+            try {
+                // اختبار قائمة buckets
+                const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+                
+                if (bucketsError) {
+                    log(`❌ خطأ في قائمة buckets: ${bucketsError.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">فشل اختبار التخزين: ${bucketsError.message}</span>`;
+                    return;
+                }
+                
+                log(`✅ تم العثور على ${buckets.length} buckets`, 'success');
+                
+                // التحقق من وجود buckets المطلوبة
+                const requiredBuckets = ['profiles', 'posts'];
+                const existingBuckets = buckets.map(b => b.name);
+                
+                for (const bucket of requiredBuckets) {
+                    if (existingBuckets.includes(bucket)) {
+                        log(`✅ bucket "${bucket}" موجود`, 'success');
+                    } else {
+                        log(`❌ bucket "${bucket}" غير موجود`, 'error');
+                    }
+                }
+                
+                resultDiv.innerHTML = '<span class="success">تم اختبار التخزين</span>';
+            } catch (err) {
+                log(`❌ خطأ في التخزين: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">فشل اختبار التخزين: ${err.message}</span>`;
+            }
+        }
+        
+        async function runAllTests() {
+            log('بدء الاختبار الشامل...', 'info');
+            document.getElementById('results').innerHTML = '';
+            
+            await testConnection();
+            await testAuth();
+            await testDatabase();
+            await testStorage();
+            
+            log('انتهى الاختبار الشامل', 'info');
+        }
+        
+        // تشغيل اختبار الاتصال تلقائياً عند تحميل الصفحة
+        window.onload = function() {
+            testConnection();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار إصلاح RLS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .warning { color: orange; font-weight: bold; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .solution-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 اختبار إصلاح RLS</h1>
+    
+    <div class="solution-box">
+        <h3>💡 الحلول المتاحة:</h3>
+        <p><strong>1. الحل السريع:</strong> استخدم <code>disable_storage_rls.sql</code></p>
+        <p><strong>2. الحل البديل:</strong> استخدم <code>alternative_storage_fix.sql</code></p>
+        <p><strong>3. الحل اليدوي:</strong> أنشئ Buckets من Dashboard</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>1. اختبار رفع صورة مع مصادقة</h2>
+        <div class="form-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="email" id="testEmail" value="test@gmail.com" placeholder="البريد الإلكتروني">
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور:</label>
+            <input type="password" id="testPassword" value="testpassword123" placeholder="كلمة المرور">
+        </div>
+        <div class="form-group">
+            <label>اختر صورة:</label>
+            <input type="file" id="testImage" accept="image/*">
+        </div>
+        <button onclick="testImageUpload()">اختبار رفع الصورة</button>
+        <div id="upload-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار رفع صورة الملف الشخصي</h2>
+        <div class="form-group">
+            <label>صورة الملف الشخصي:</label>
+            <input type="file" id="profileImage" accept="image/*">
+        </div>
+        <button onclick="testProfileUpload()">اختبار رفع صورة الملف الشخصي</button>
+        <div id="profile-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار رفع صورة المنشور</h2>
+        <div class="form-group">
+            <label>صورة المنشور:</label>
+            <input type="file" id="postImage" accept="image/*">
+        </div>
+        <button onclick="testPostUpload()">اختبار رفع صورة المنشور</button>
+        <div id="post-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. اختبار شامل</h2>
+        <button onclick="runFullTest()">اختبار شامل</button>
+        <div id="full-test-result"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // إعداد Supabase
+        const supabaseUrl = 'https://mpcrbgtqqeopypxvcicj.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wY3JiZ3RxcWVvcHlweHZjaWNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwMjQsImV4cCI6MjA3NTE0MzAyNH0.6WDHyVsg4XmQ1wzwJ6WZj366Q838LsfzSuzTuBQWbEo';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function testImageUpload() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            const imageFile = document.getElementById('testImage').files[0];
+            
+            if (!email || !password) {
+                log('❌ يرجى إدخال البريد الإلكتروني وكلمة المرور', 'error');
+                return;
+            }
+            
+            if (!imageFile) {
+                log('❌ يرجى اختيار صورة', 'error');
+                return;
+            }
+            
+            log(`بدء اختبار رفع الصورة: ${email}`, 'info');
+            const resultDiv = document.getElementById('upload-result');
+            
+            try {
+                // 1. تسجيل الدخول
+                log('1. تسجيل الدخول...', 'info');
+                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (authError) {
+                    log(`❌ خطأ في المصادقة: ${authError.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ في المصادقة: ${authError.message}</span>`;
+                    return;
+                }
+                
+                log('✅ تم تسجيل الدخول بنجاح', 'success');
+                
+                // 2. رفع الصورة
+                log('2. رفع الصورة...', 'info');
+                const fileName = `test_${Date.now()}.${imageFile.name.split('.').pop()}`;
+                
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('profiles')
+                    .upload(fileName, imageFile, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (uploadError) {
+                    if (uploadError.message.includes('violates row-level security policy')) {
+                        log('❌ خطأ RLS: السياسة تمنع الرفع', 'error');
+                        resultDiv.innerHTML = `
+                            <div class="error">
+                                <p>خطأ RLS: السياسة تمنع الرفع</p>
+                                <p><strong>الحلول:</strong></p>
+                                <ul>
+                                    <li>استخدم <code>disable_storage_rls.sql</code></li>
+                                    <li>أو استخدم <code>alternative_storage_fix.sql</code></li>
+                                    <li>أو أنشئ Buckets من Dashboard</li>
+                                </ul>
+                            </div>
+                        `;
+                    } else {
+                        log(`❌ خطأ آخر: ${uploadError.message}`, 'error');
+                        resultDiv.innerHTML = `<span class="error">خطأ: ${uploadError.message}</span>`;
+                    }
+                } else {
+                    log('✅ تم رفع الصورة بنجاح', 'success');
+                    
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('profiles')
+                        .getPublicUrl(fileName);
+                    
+                    resultDiv.innerHTML = `
+                        <div>
+                            <p class="success">تم رفع الصورة بنجاح</p>
+                            <img src="${publicUrl}" alt="الصورة المرفوعة" style="max-width: 200px; border-radius: 10px; margin-top: 10px;">
+                            <p><strong>الرابط:</strong> <a href="${publicUrl}" target="_blank">${publicUrl}</a></p>
+                        </div>
+                    `;
+                }
+                
+            } catch (err) {
+                log(`❌ خطأ في الاختبار: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testProfileUpload() {
+            const imageFile = document.getElementById('profileImage').files[0];
+            if (!imageFile) {
+                log('❌ يرجى اختيار صورة للملف الشخصي', 'error');
+                return;
+            }
+            
+            log('اختبار رفع صورة الملف الشخصي...', 'info');
+            const resultDiv = document.getElementById('profile-result');
+            
+            try {
+                const fileName = `profile_${Date.now()}.${imageFile.name.split('.').pop()}`;
+                
+                const { data, error } = await supabase.storage
+                    .from('profiles')
+                    .upload(fileName, imageFile, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (error) {
+                    if (error.message.includes('violates row-level security policy')) {
+                        resultDiv.innerHTML = '<span class="error">خطأ RLS: يرجى تشغيل ملف الإصلاح أولاً</span>';
+                    } else {
+                        resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    }
+                } else {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('profiles')
+                        .getPublicUrl(fileName);
+                    
+                    resultDiv.innerHTML = `
+                        <div>
+                            <p class="success">تم رفع صورة الملف الشخصي بنجاح</p>
+                            <img src="${publicUrl}" alt="صورة الملف الشخصي" style="max-width: 200px; border-radius: 50%; margin-top: 10px;">
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testPostUpload() {
+            const imageFile = document.getElementById('postImage').files[0];
+            if (!imageFile) {
+                log('❌ يرجى اختيار صورة للمنشور', 'error');
+                return;
+            }
+            
+            log('اختبار رفع صورة المنشور...', 'info');
+            const resultDiv = document.getElementById('post-result');
+            
+            try {
+                const fileName = `post_${Date.now()}.${imageFile.name.split('.').pop()}`;
+                
+                const { data, error } = await supabase.storage
+                    .from('posts')
+                    .upload(fileName, imageFile, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (error) {
+                    if (error.message.includes('violates row-level security policy')) {
+                        resultDiv.innerHTML = '<span class="error">خطأ RLS: يرجى تشغيل ملف الإصلاح أولاً</span>';
+                    } else {
+                        resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    }
+                } else {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('posts')
+                        .getPublicUrl(fileName);
+                    
+                    resultDiv.innerHTML = `
+                        <div>
+                            <p class="success">تم رفع صورة المنشور بنجاح</p>
+                            <img src="${publicUrl}" alt="صورة المنشور" style="max-width: 200px; border-radius: 10px; margin-top: 10px;">
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function runFullTest() {
+            log('بدء الاختبار الشامل...', 'info');
+            document.getElementById('results').innerHTML = '';
+            
+            await testImageUpload();
+            
+            log('انتهى الاختبار الشامل', 'info');
+        }
+    </script>
+</body>
+</html>

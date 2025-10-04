@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار إصلاح Storage</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .warning { color: orange; font-weight: bold; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .solution-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 اختبار إصلاح Storage</h1>
+    
+    <div class="solution-box">
+        <h3>💡 الحل السريع:</h3>
+        <p>1. افتح Supabase Dashboard > SQL Editor</p>
+        <p>2. انسخ محتوى ملف <code>fix_storage_policies.sql</code></p>
+        <p>3. الصق واضغط Run</p>
+        <p>4. جرب رفع الصور مرة أخرى</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>1. فحص حالة المصادقة</h2>
+        <button onclick="checkAuthStatus()">فحص المصادقة</button>
+        <div id="auth-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار رفع صورة بدون مصادقة</h2>
+        <button onclick="testUploadWithoutAuth()">اختبار بدون مصادقة</button>
+        <div id="no-auth-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار رفع صورة مع مصادقة</h2>
+        <div class="form-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="email" id="testEmail" value="test@gmail.com" placeholder="البريد الإلكتروني">
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور:</label>
+            <input type="password" id="testPassword" value="testpassword123" placeholder="كلمة المرور">
+        </div>
+        <div class="form-group">
+            <label>اختر صورة:</label>
+            <input type="file" id="testImage" accept="image/*">
+        </div>
+        <button onclick="testUploadWithAuth()">اختبار مع مصادقة</button>
+        <div id="with-auth-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. اختبار شامل للـ Storage</h2>
+        <button onclick="runFullStorageTest()">اختبار شامل</button>
+        <div id="full-test-result"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // إعداد Supabase
+        const supabaseUrl = 'https://mpcrbgtqqeopypxvcicj.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wY3JiZ3RxcWVvcHlweHZjaWNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwMjQsImV4cCI6MjA3NTE0MzAyNH0.6WDHyVsg4XmQ1wzwJ6WZj366Q838LsfzSuzTuBQWbEo';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function checkAuthStatus() {
+            log('فحص حالة المصادقة...', 'info');
+            const resultDiv = document.getElementById('auth-result');
+            
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    log(`❌ خطأ في فحص المصادقة: ${error.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                } else if (session) {
+                    log(`✅ المستخدم مسجل الدخول: ${session.user.email}`, 'success');
+                    resultDiv.innerHTML = `<span class="success">مسجل الدخول: ${session.user.email}</span>`;
+                } else {
+                    log('⚠️ لا يوجد مستخدم مسجل الدخول', 'warning');
+                    resultDiv.innerHTML = '<span class="warning">لا يوجد مستخدم مسجل الدخول</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في فحص المصادقة: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testUploadWithoutAuth() {
+            log('اختبار رفع صورة بدون مصادقة...', 'info');
+            const resultDiv = document.getElementById('no-auth-result');
+            
+            try {
+                // إنشاء ملف تجريبي
+                const testContent = 'test content';
+                const blob = new Blob([testContent], { type: 'text/plain' });
+                
+                const { data, error } = await supabase.storage
+                    .from('profiles')
+                    .upload('test-file.txt', blob);
+                
+                if (error) {
+                    if (error.message.includes('violates row-level security policy')) {
+                        log('❌ خطأ RLS: السياسة تمنع الرفع بدون مصادقة', 'error');
+                        resultDiv.innerHTML = '<span class="error">خطأ RLS: السياسة تمنع الرفع بدون مصادقة<br><small>هذا طبيعي - يجب تسجيل الدخول أولاً</small></span>';
+                    } else {
+                        log(`❌ خطأ آخر: ${error.message}`, 'error');
+                        resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                    }
+                } else {
+                    log('✅ تم الرفع بنجاح (غير متوقع)', 'success');
+                    resultDiv.innerHTML = '<span class="success">تم الرفع بنجاح (غير متوقع)</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في الرفع: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testUploadWithAuth() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            const imageFile = document.getElementById('testImage').files[0];
+            
+            if (!email || !password) {
+                log('❌ يرجى إدخال البريد الإلكتروني وكلمة المرور', 'error');
+                return;
+            }
+            
+            if (!imageFile) {
+                log('❌ يرجى اختيار صورة', 'error');
+                return;
+            }
+            
+            log(`بدء اختبار رفع الصورة مع مصادقة: ${email}`, 'info');
+            const resultDiv = document.getElementById('with-auth-result');
+            
+            try {
+                // 1. تسجيل الدخول
+                log('1. تسجيل الدخول...', 'info');
+                const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (authError) {
+                    log(`❌ خطأ في المصادقة: ${authError.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ في المصادقة: ${authError.message}</span>`;
+                    return;
+                }
+                
+                log('✅ تم تسجيل الدخول بنجاح', 'success');
+                
+                // 2. رفع الصورة
+                log('2. رفع الصورة...', 'info');
+                const fileName = `test_${Date.now()}.${imageFile.name.split('.').pop()}`;
+                
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('profiles')
+                    .upload(fileName, imageFile, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+                
+                if (uploadError) {
+                    if (uploadError.message.includes('violates row-level security policy')) {
+                        log('❌ خطأ RLS: السياسة تمنع الرفع', 'error');
+                        resultDiv.innerHTML = '<span class="error">خطأ RLS: السياسة تمنع الرفع<br><small>يرجى تشغيل fix_storage_policies.sql</small></span>';
+                    } else {
+                        log(`❌ خطأ آخر: ${uploadError.message}`, 'error');
+                        resultDiv.innerHTML = `<span class="error">خطأ: ${uploadError.message}</span>`;
+                    }
+                } else {
+                    log('✅ تم رفع الصورة بنجاح', 'success');
+                    
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('profiles')
+                        .getPublicUrl(fileName);
+                    
+                    resultDiv.innerHTML = `
+                        <div>
+                            <p class="success">تم رفع الصورة بنجاح</p>
+                            <img src="${publicUrl}" alt="الصورة المرفوعة" style="max-width: 200px; border-radius: 10px; margin-top: 10px;">
+                            <p><strong>الرابط:</strong> <a href="${publicUrl}" target="_blank">${publicUrl}</a></p>
+                        </div>
+                    `;
+                }
+                
+            } catch (err) {
+                log(`❌ خطأ في الاختبار: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function runFullStorageTest() {
+            log('بدء الاختبار الشامل للـ Storage...', 'info');
+            document.getElementById('results').innerHTML = '';
+            
+            await checkAuthStatus();
+            await testUploadWithoutAuth();
+            
+            log('انتهى الاختبار الشامل', 'info');
+        }
+        
+        // تشغيل فحص المصادقة تلقائياً عند تحميل الصفحة
+        window.onload = function() {
+            checkAuthStatus();
+        };
+    </script>
+</body>
+</html>

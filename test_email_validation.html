@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار صحة البريد الإلكتروني</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .example-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📧 اختبار صحة البريد الإلكتروني</h1>
+    
+    <div class="example-box">
+        <h3>💡 أمثلة على بريد إلكتروني صالح:</h3>
+        <ul>
+            <li>user@gmail.com</li>
+            <li>test@yahoo.com</li>
+            <li>demo@outlook.com</li>
+            <li>admin@company.com</li>
+        </ul>
+        
+        <h3>❌ أمثلة على بريد إلكتروني غير صالح:</h3>
+        <ul>
+            <li>.com (ناقص)</li>
+            <li>@gmail.com (ناقص اسم المستخدم)</li>
+            <li>user@ (ناقص النطاق)</li>
+            <li>user.gmail.com (ناقص @)</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>1. اختبار صحة البريد الإلكتروني</h2>
+        <div class="form-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="text" id="testEmail" placeholder="أدخل البريد الإلكتروني للاختبار">
+        </div>
+        <button onclick="testEmailValidation()">اختبار صحة البريد الإلكتروني</button>
+        <div id="validation-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار أمثلة مختلفة</h2>
+        <button onclick="testEmailExamples()">اختبار أمثلة مختلفة</button>
+        <div id="examples-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار تسجيل مع بريد إلكتروني صالح</h2>
+        <div class="form-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="email" id="registerEmail" value="test@gmail.com" placeholder="البريد الإلكتروني">
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور:</label>
+            <input type="password" id="registerPassword" value="testpassword123" placeholder="كلمة المرور">
+        </div>
+        <div class="form-group">
+            <label>اسم المستخدم:</label>
+            <input type="text" id="registerUsername" value="testuser" placeholder="اسم المستخدم">
+        </div>
+        <button onclick="testRegistration()">اختبار التسجيل</button>
+        <div id="registration-result"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function validateEmail(email) {
+            // التحقق من صحة البريد الإلكتروني
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            
+            if (!email) {
+                return { valid: false, message: 'البريد الإلكتروني مطلوب' };
+            }
+            
+            if (!email.includes('@')) {
+                return { valid: false, message: 'البريد الإلكتروني يجب أن يحتوي على @' };
+            }
+            
+            if (email.startsWith('@')) {
+                return { valid: false, message: 'البريد الإلكتروني لا يمكن أن يبدأ بـ @' };
+            }
+            
+            if (email.endsWith('.com') && !email.includes('@')) {
+                return { valid: false, message: 'البريد الإلكتروني غير صالح، استخدم تنسيق صحيح مثل: example@gmail.com' };
+            }
+            
+            if (!emailRegex.test(email)) {
+                return { valid: false, message: 'البريد الإلكتروني غير صالح، استخدم تنسيق صحيح مثل: example@gmail.com' };
+            }
+            
+            return { valid: true, message: 'البريد الإلكتروني صالح' };
+        }
+        
+        function testEmailValidation() {
+            const email = document.getElementById('testEmail').value;
+            const resultDiv = document.getElementById('validation-result');
+            
+            if (!email) {
+                log('❌ يرجى إدخال بريد إلكتروني للاختبار', 'error');
+                resultDiv.innerHTML = '<span class="error">يرجى إدخال بريد إلكتروني للاختبار</span>';
+                return;
+            }
+            
+            const validation = validateEmail(email);
+            
+            if (validation.valid) {
+                log(`✅ ${email} - ${validation.message}`, 'success');
+                resultDiv.innerHTML = `<span class="success">${validation.message}</span>`;
+            } else {
+                log(`❌ ${email} - ${validation.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">${validation.message}</span>`;
+            }
+        }
+        
+        function testEmailExamples() {
+            log('اختبار أمثلة مختلفة من البريد الإلكتروني...', 'info');
+            const resultDiv = document.getElementById('examples-result');
+            
+            const examples = [
+                { email: 'user@gmail.com', expected: true },
+                { email: 'test@yahoo.com', expected: true },
+                { email: 'demo@outlook.com', expected: true },
+                { email: '.com', expected: false },
+                { email: '@gmail.com', expected: false },
+                { email: 'user@', expected: false },
+                { email: 'user.gmail.com', expected: false },
+                { email: '', expected: false },
+                { email: 'user@domain', expected: false },
+                { email: 'user@domain.', expected: false }
+            ];
+            
+            let passed = 0;
+            let total = examples.length;
+            
+            examples.forEach(example => {
+                const validation = validateEmail(example.email);
+                const isCorrect = validation.valid === example.expected;
+                
+                if (isCorrect) {
+                    log(`✅ ${example.email} - ${validation.message}`, 'success');
+                    passed++;
+                } else {
+                    log(`❌ ${example.email} - ${validation.message} (متوقع: ${example.expected ? 'صالح' : 'غير صالح'})`, 'error');
+                }
+            });
+            
+            log(`النتيجة: ${passed}/${total} اختبار نجح`, passed === total ? 'success' : 'error');
+            resultDiv.innerHTML = `<span class="${passed === total ? 'success' : 'error'}">النتيجة: ${passed}/${total} اختبار نجح</span>`;
+        }
+        
+        async function testRegistration() {
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const username = document.getElementById('registerUsername').value;
+            
+            if (!email || !password || !username) {
+                log('❌ يرجى ملء جميع الحقول', 'error');
+                return;
+            }
+            
+            // التحقق من صحة البريد الإلكتروني أولاً
+            const validation = validateEmail(email);
+            if (!validation.valid) {
+                log(`❌ ${validation.message}`, 'error');
+                return;
+            }
+            
+            log(`بدء اختبار التسجيل مع: ${email}`, 'info');
+            const resultDiv = document.getElementById('registration-result');
+            
+            try {
+                // محاكاة عملية التسجيل
+                log('1. التحقق من صحة البريد الإلكتروني...', 'info');
+                log(`✅ ${validation.message}`, 'success');
+                
+                log('2. التحقق من كلمة المرور...', 'info');
+                if (password.length >= 6) {
+                    log('✅ كلمة المرور صالحة', 'success');
+                } else {
+                    log('❌ كلمة المرور قصيرة جداً', 'error');
+                    return;
+                }
+                
+                log('3. التحقق من اسم المستخدم...', 'info');
+                if (username.length >= 3) {
+                    log('✅ اسم المستخدم صالح', 'success');
+                } else {
+                    log('❌ اسم المستخدم قصير جداً', 'error');
+                    return;
+                }
+                
+                log('✅ جميع البيانات صالحة - يمكن المتابعة للتسجيل', 'success');
+                resultDiv.innerHTML = '<span class="success">جميع البيانات صالحة - يمكن المتابعة للتسجيل</span>';
+                
+            } catch (err) {
+                log(`❌ خطأ في الاختبار: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        // اختبار أمثلة مختلفة تلقائياً عند تحميل الصفحة
+        window.onload = function() {
+            testEmailExamples();
+        };
+    </script>
+</body>
+</html>

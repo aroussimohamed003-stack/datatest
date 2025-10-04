@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار صورة الملف الشخصي</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        .post-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .post-header {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e1e1e1;
+            transition: border-color 0.3s;
+        }
+        .post-avatar:hover {
+            border-color: #667eea;
+        }
+        .post-user-info h3 {
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .post-user-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        .post-content {
+            padding: 20px;
+        }
+        .post-text {
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>👤 اختبار صورة الملف الشخصي</h1>
+    
+    <div class="test-section">
+        <h2>1. اختبار تسجيل الدخول</h2>
+        <div class="form-group">
+            <label>البريد الإلكتروني:</label>
+            <input type="email" id="loginEmail" value="test@gmail.com" placeholder="البريد الإلكتروني">
+        </div>
+        <div class="form-group">
+            <label>كلمة المرور:</label>
+            <input type="password" id="loginPassword" value="testpassword123" placeholder="كلمة المرور">
+        </div>
+        <button onclick="testLogin()">تسجيل الدخول</button>
+        <div id="login-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. اختبار تحميل بيانات الملف الشخصي</h2>
+        <button onclick="testLoadProfile()">تحميل بيانات الملف الشخصي</button>
+        <div id="profile-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. اختبار رفع صورة الملف الشخصي</h2>
+        <div class="form-group">
+            <label>اختر صورة:</label>
+            <input type="file" id="profileImage" accept="image/*">
+        </div>
+        <button onclick="testUploadProfileImage()">رفع صورة الملف الشخصي</button>
+        <div id="upload-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. معاينة المنشورات مع صورة الملف الشخصي</h2>
+        <button onclick="previewPostsWithProfile()">معاينة المنشورات</button>
+        <div id="posts-preview"></div>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // إعداد Supabase
+        const supabaseUrl = 'https://mpcrbgtqqeopypxvcicj.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wY3JiZ3RxcWVvcHlweHZjaWNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1NjcwMjQsImV4cCI6MjA3NTE0MzAyNH0.6WDHyVsg4XmQ1wzwJ6WZj366Q838LsfzSuzTuBQWbEo';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        let currentUser = null;
+        let currentUserProfile = null;
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                log('❌ يرجى إدخال البريد الإلكتروني وكلمة المرور', 'error');
+                return;
+            }
+            
+            log(`محاولة تسجيل الدخول: ${email}`, 'info');
+            const resultDiv = document.getElementById('login-result');
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    log(`❌ خطأ في تسجيل الدخول: ${error.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                } else {
+                    log('✅ تم تسجيل الدخول بنجاح', 'success');
+                    currentUser = data.user;
+                    resultDiv.innerHTML = '<span class="success">تم تسجيل الدخول بنجاح</span>';
+                }
+            } catch (err) {
+                log(`❌ خطأ في تسجيل الدخول: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testLoadProfile() {
+            if (!currentUser) {
+                log('❌ يرجى تسجيل الدخول أولاً', 'error');
+                return;
+            }
+            
+            log('تحميل بيانات الملف الشخصي...', 'info');
+            const resultDiv = document.getElementById('profile-result');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error) {
+                    log(`❌ خطأ في تحميل الملف الشخصي: ${error.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${error.message}</span>`;
+                } else {
+                    log('✅ تم تحميل الملف الشخصي بنجاح', 'success');
+                    currentUserProfile = data;
+                    resultDiv.innerHTML = `
+                        <div>
+                            <p><strong>اسم المستخدم:</strong> ${data.username}</p>
+                            <p><strong>البريد الإلكتروني:</strong> ${data.email}</p>
+                            <p><strong>صورة الملف الشخصي:</strong> ${data.avatar_url ? 'موجودة' : 'غير موجودة'}</p>
+                            ${data.avatar_url ? `<img src="${data.avatar_url}" alt="صورة الملف الشخصي" style="width: 50px; height: 50px; border-radius: 50%; margin-top: 10px;">` : ''}
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                log(`❌ خطأ في تحميل الملف الشخصي: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        async function testUploadProfileImage() {
+            if (!currentUser) {
+                log('❌ يرجى تسجيل الدخول أولاً', 'error');
+                return;
+            }
+            
+            const imageFile = document.getElementById('profileImage').files[0];
+            if (!imageFile) {
+                log('❌ يرجى اختيار صورة', 'error');
+                return;
+            }
+            
+            log('رفع صورة الملف الشخصي...', 'info');
+            const resultDiv = document.getElementById('upload-result');
+            
+            try {
+                const fileExt = imageFile.name.split('.').pop();
+                const fileName = `${currentUser.id}.${fileExt}`;
+                
+                const { error: uploadError } = await supabase.storage
+                    .from('profiles')
+                    .upload(fileName, imageFile);
+                
+                if (uploadError) {
+                    log(`❌ خطأ في رفع الصورة: ${uploadError.message}`, 'error');
+                    resultDiv.innerHTML = `<span class="error">خطأ: ${uploadError.message}</span>`;
+                } else {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('profiles')
+                        .getPublicUrl(fileName);
+                    
+                    log('✅ تم رفع الصورة بنجاح', 'success');
+                    
+                    // تحديث الملف الشخصي
+                    const { error: updateError } = await supabase
+                        .from('profiles')
+                        .update({ avatar_url: publicUrl })
+                        .eq('id', currentUser.id);
+                    
+                    if (updateError) {
+                        log(`❌ خطأ في تحديث الملف الشخصي: ${updateError.message}`, 'error');
+                    } else {
+                        log('✅ تم تحديث الملف الشخصي بنجاح', 'success');
+                        currentUserProfile.avatar_url = publicUrl;
+                    }
+                    
+                    resultDiv.innerHTML = `
+                        <div>
+                            <p><strong>تم رفع الصورة بنجاح</strong></p>
+                            <img src="${publicUrl}" alt="صورة الملف الشخصي" style="width: 100px; height: 100px; border-radius: 50%; margin-top: 10px;">
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                log(`❌ خطأ في رفع الصورة: ${err.message}`, 'error');
+                resultDiv.innerHTML = `<span class="error">خطأ: ${err.message}</span>`;
+            }
+        }
+        
+        function previewPostsWithProfile() {
+            log('معاينة المنشورات مع صورة الملف الشخصي...', 'info');
+            const resultDiv = document.getElementById('posts-preview');
+            
+            const samplePosts = [
+                {
+                    profiles: currentUserProfile ? {
+                        username: currentUserProfile.username,
+                        avatar_url: currentUserProfile.avatar_url
+                    } : { username: 'مستخدم', avatar_url: null },
+                    content: 'منشور تجريبي مع صورة الملف الشخصي',
+                    image_url: 'https://picsum.photos/400/300?random=1',
+                    likes: 15,
+                    created_at: new Date().toISOString()
+                }
+            ];
+            
+            let html = '';
+            
+            samplePosts.forEach(post => {
+                const createdAt = new Date(post.created_at).toLocaleDateString('ar-SA');
+                
+                // معالجة صورة الملف الشخصي
+                let avatarUrl = 'https://via.placeholder.com/40/667eea/ffffff?text=👤';
+                if (post.profiles?.avatar_url) {
+                    avatarUrl = post.profiles.avatar_url;
+                }
+                
+                html += `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <img src="${avatarUrl}" 
+                                 alt="صورة الملف الشخصي" 
+                                 class="post-avatar"
+                                 onerror="this.src='https://via.placeholder.com/40/667eea/ffffff?text=👤'">
+                            <div class="post-user-info">
+                                <h3>${post.profiles?.username || 'مستخدم'}</h3>
+                                <p>${createdAt}</p>
+                            </div>
+                        </div>
+                        <img src="${post.image_url}" alt="صورة المنشور" class="post-image" onerror="this.style.display='none'">
+                        <div class="post-content">
+                            <p class="post-text">${post.content}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultDiv.innerHTML = html;
+            log('تم معاينة المنشورات', 'success');
+        }
+    </script>
+</body>
+</html>
